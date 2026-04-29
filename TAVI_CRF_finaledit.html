@@ -1236,7 +1236,7 @@ function renderRecords(records) {
   };
 
   const rows = records.map((r,i) => `
-    <tr onclick="showDetail(${i})" title="Click to view full record">
+    <tr onclick="showDetail(${allRecords.indexOf(r)})" title="Click to view full record">
       <td><span style="font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--navy)">${fmt(r.studyId)}</span></td>
       <td>${fmt(r.taviDate)}</td>
       <td>${fmt(r.age)}</td>
@@ -1328,7 +1328,7 @@ function showDetail(idx) {
       Submitted: ${r.submittedAt || '—'}
     </div>
     <div style="margin-top:16px;">
-      <button class="btn btn-primary" style="width:100%" onclick="loadRecordToEdit(${i})">✏️ Edit this record</button>
+      <button class="btn btn-primary" style="width:100%" onclick="loadRecordToEdit(${allRecords.indexOf(r)})">✏️ Edit this record</button>
     </div>`;
   document.getElementById('detailOverlay').classList.add('show');
 }
