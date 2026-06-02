@@ -1445,5 +1445,323 @@ window.addEventListener('DOMContentLoaded', () => {
   showTab(0);
 });
 </script>
+  <!-- ════════════════════════════════════════════════════════════════════
+     TAVI CRF ADD-ON MODULE  v1.0
+     Adds: (1) Search-by-Study-ID loader  (2) Drive image panel
+           (3) Built-in ECG caliper with per-image calibration
+     HOW TO INSTALL:  paste this entire block immediately BEFORE the
+     closing </body> tag of your existing CRF file. Nothing else changes.
+     ════════════════════════════════════════════════════════════════════ -->
+
+<style>
+  /* ── Add-on styling, namespaced with .tx- to avoid clashes ── */
+  .tx-bar{display:flex;gap:8px;align-items:center;max-width:760px;margin:0 auto 18px;
+    padding:12px 16px;background:var(--card);border:1px solid var(--border);
+    border-radius:8px;box-shadow:var(--shadow);}
+  .tx-bar input{flex:1;font-family:'IBM Plex Mono',monospace;font-size:14px;
+    padding:9px 12px;border:1px solid var(--border);border-radius:5px;}
+  .tx-bar button{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;
+    padding:9px 16px;border:none;border-radius:5px;cursor:pointer;color:#fff;background:var(--blue);}
+  .tx-bar button:hover{background:var(--navy);}
+  .tx-bar .tx-msg{font-size:12px;color:var(--muted);min-width:120px;}
+
+  .tx-imgwrap{max-width:1100px;margin:0 auto 22px;}
+  .tx-imgcfg{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;
+    padding:10px 14px;background:var(--light);border-radius:6px;font-size:12px;}
+  .tx-imgcfg input{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:6px 10px;
+    border:1px solid var(--border);border-radius:4px;flex:1;min-width:240px;}
+  .tx-imgcfg button{font-size:12px;font-weight:600;padding:6px 12px;border:none;border-radius:4px;
+    cursor:pointer;background:var(--blue);color:#fff;}
+  .tx-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .tx-thumb{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--card);
+    box-shadow:var(--shadow);display:flex;flex-direction:column;}
+  .tx-thumb .tx-lbl{font-size:12px;font-weight:600;padding:8px 12px;background:var(--navy);color:#fff;
+    display:flex;justify-content:space-between;align-items:center;}
+  .tx-thumb img{width:100%;height:150px;object-fit:contain;background:#0d1424;cursor:zoom-in;display:block;}
+  .tx-thumb .tx-missing{height:150px;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:12px;background:#fafbfd;text-align:center;padding:10px;}
+  .tx-thumb .tx-open{font-size:11px;font-weight:500;color:#fff;text-decoration:none;opacity:.85;}
+  .tx-thumb .tx-cal-btn{font-size:11px;font-weight:600;padding:5px 10px;border:none;cursor:pointer;
+    background:var(--accent);color:#fff;width:100%;}
+
+  /* ── Caliper overlay ── */
+  .tx-cal-overlay{position:fixed;inset:0;background:rgba(10,16,32,.92);z-index:5000;display:none;
+    flex-direction:column;padding:14px;}
+  .tx-cal-overlay.show{display:flex;}
+  .tx-cal-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#fff;
+    font-size:13px;margin-bottom:10px;}
+  .tx-cal-top select,.tx-cal-top input{font-size:13px;padding:6px 10px;border-radius:4px;
+    border:1px solid #44557a;background:#1a2335;color:#fff;}
+  .tx-cal-top .tx-cal-x{margin-left:auto;font-size:24px;cursor:pointer;color:#fff;
+    background:none;border:none;line-height:1;}
+  .tx-cal-stage{flex:1;position:relative;overflow:hidden;border:1px solid #2a3a5e;border-radius:6px;
+    background:#0d1424;}
+  .tx-cal-stage canvas{position:absolute;top:0;left:0;cursor:crosshair;}
+  .tx-cal-readout{font-family:'IBM Plex Mono',monospace;background:#1a2335;color:#7fe3a4;
+    padding:6px 12px;border-radius:4px;font-weight:600;}
+  .tx-cal-step{background:var(--accent);color:#fff;padding:6px 12px;border-radius:4px;font-weight:600;}
+  .tx-cal-act{font-size:13px;font-weight:600;padding:7px 14px;border:none;border-radius:5px;
+    cursor:pointer;background:var(--blue);color:#fff;}
+  .tx-cal-act.green{background:var(--green);}
+  .tx-cal-act.grey{background:#44557a;}
+  .tx-cal-hint{color:#9fb0d0;font-size:12px;}
+</style>
+
+<!-- ░░ 1. SEARCH BAR  — injected at top of every data-entry tab ░░ -->
+<div class="tx-bar" id="txSearchBar" style="display:none;">
+  <span style="font-size:18px">🔎</span>
+  <input id="txSearchId" placeholder="Type Study ID (e.g. 20240115) and press Enter to load…"
+         onkeydown="if(event.key==='Enter')txLoadById()">
+  <button onclick="txLoadById()">Load &amp; Edit</button>
+  <button onclick="txNewRecord()" style="background:var(--green)">+ New</button>
+  <span class="tx-msg" id="txSearchMsg"></span>
+</div>
+
+<!-- ░░ 2. DRIVE IMAGE PANEL — injected into ECG tab (tab3) ░░ -->
+<div class="tx-imgwrap" id="txImgWrap" style="display:none;">
+  <div class="tx-imgcfg">
+    <span style="font-weight:600;color:var(--navy)">📁 Drive folder link:</span>
+    <input id="txFolderLink" placeholder="Paste shared Google Drive folder link (once) — saved in your browser">
+    <button onclick="txSaveFolder()">Save folder</button>
+    <span id="txFolderMsg" style="color:var(--muted)"></span>
+  </div>
+  <div class="tx-thumbs" id="txThumbs"></div>
+</div>
+
+<!-- ░░ 3. CALIPER OVERLAY ░░ -->
+<div class="tx-cal-overlay" id="txCalOverlay">
+  <div class="tx-cal-top">
+    <span class="tx-cal-step" id="txCalStep">Step 1 — Calibrate</span>
+    <span class="tx-cal-hint" id="txCalHint">Click two points a KNOWN distance apart on the ECG, then enter that distance.</span>
+    <label>Known dist:
+      <input type="number" id="txCalKnown" value="1000" style="width:90px"> </label>
+    <select id="txCalUnit"><option value="ms">ms</option><option value="mV">mV</option></select>
+    <button class="tx-cal-act" id="txCalSetBtn" onclick="txSetCalibration()">Set calibration</button>
+    <span class="tx-cal-readout" id="txCalRead">not calibrated</span>
+    <select id="txCalTarget" title="Where to write the measurement">
+      <optgroup label="Pre-TAVI">
+        <option value="ecg_pr_pre">PR (pre)</option><option value="ecg_qrs_pre">QRS (pre)</option>
+        <option value="ecg_qt_pre">QT (pre)</option><option value="ecg_qtc_pre">QTc (pre)</option>
+        <option value="ecg_tpte_pre">Tp-Te (pre)</option>
+      </optgroup>
+      <optgroup label="Post-TAVI">
+        <option value="ecg_pr_post">PR (post)</option><option value="ecg_qrs_post">QRS (post)</option>
+        <option value="ecg_qt_post">QT (post)</option><option value="ecg_qtc_post">QTc (post)</option>
+        <option value="ecg_tpte_post">Tp-Te (post)</option>
+      </optgroup>
+    </select>
+    <button class="tx-cal-act green" id="txCalWrite" onclick="txWriteMeasure()" disabled>↳ Record to field</button>
+    <button class="tx-cal-act grey" onclick="txCalReset()">Clear points</button>
+    <button class="tx-cal-x" onclick="txCalClose()">×</button>
+  </div>
+  <div class="tx-cal-stage" id="txCalStage">
+    <canvas id="txCalImg"></canvas>
+    <canvas id="txCalDraw"></canvas>
+  </div>
+</div>
+
+<script>
+/* ════════ TAVI ADD-ON LOGIC ════════ */
+(function(){
+  const LS_FOLDER = 'tavi_drive_folder';
+  const IMG_KINDS = [
+    {key:'ECG1', lbl:'ECG #1'}, {key:'ECG2', lbl:'ECG #2'},
+    {key:'ECG3', lbl:'ECG #3'}, {key:'MSL', lbl:'Membr. Septum'},
+    {key:'Depth', lbl:'Implant Depth'}
+  ];
+
+  /* ---- inject the search bar into each data tab, and image panel into tab3 ---- */
+  function txInject(){
+    const bar = document.getElementById('txSearchBar');
+    const imgWrap = document.getElementById('txImgWrap');
+    // place search bar at top of currently visible tab content
+    const orig = window.showTab;
+    window.showTab = function(n){
+      orig(n);
+      if(n>=0 && n<=3){           // data-entry tabs only, not Records(4)
+        const host = document.getElementById('tab'+n);
+        if(host && bar.parentElement!==host){ host.insertBefore(bar, host.firstChild); }
+        bar.style.display='flex';
+      } else { bar.style.display='none'; }
+      // image panel lives in the ECG tab (tab3)
+      if(n===3){
+        const ecgHost = document.getElementById('tab3');
+        if(imgWrap.parentElement!==ecgHost){ ecgHost.appendChild(imgWrap); }
+        imgWrap.style.display='block';
+        txRenderThumbs();
+      } else { imgWrap.style.display='none'; }
+    };
+    // restore saved folder link
+    const saved = localStorage.getItem(LS_FOLDER);
+    if(saved) document.getElementById('txFolderLink').value = saved;
+  }
+
+  /* ---- SEARCH BY ID: reuse existing allRecords + loadRecordToEdit ---- */
+  window.txLoadById = async function(){
+    const idEl = document.getElementById('txSearchId');
+    const msg  = document.getElementById('txSearchMsg');
+    const id   = idEl.value.trim();
+    if(!id){ msg.textContent='Enter an ID first'; return; }
+    msg.textContent='Searching…';
+    try{
+      if(!window.allRecords || !allRecords.length){
+        await loadRecords();                       // pull from Sheets if not loaded
+      }
+      const idx = allRecords.findIndex(r=>String(r.studyId).trim()===id);
+      if(idx<0){ msg.textContent='✗ No record for '+id; return; }
+      loadRecordToEdit(idx);                        // existing fn fills the whole form
+      msg.textContent='✓ Loaded '+id;
+      txRenderThumbs();
+    }catch(e){ msg.textContent='Load error'; }
+  };
+
+  window.txNewRecord = function(){
+    if(typeof resetForm==='function'){
+      document.getElementById('successModal')?.classList.remove('show');
+    }
+    document.querySelectorAll('#tab0 input,#tab1 input,#tab2 input,#tab3 input').forEach(el=>{
+      if(el.type==='radio'||el.type==='checkbox') el.checked=false;
+      else if(el.type!=='hidden' && !el.id.startsWith('tx')) el.value='';
+    });
+    document.querySelectorAll('.choice-item').forEach(el=>
+      el.classList.remove('selected','selected-yes','selected-no','selected-unk'));
+    window._editingStudyId=null;
+    document.getElementById('headerStudyId').textContent='ID: —';
+    document.getElementById('txSearchMsg').textContent='New blank record';
+    document.getElementById('txSearchId').value='';
+    showTab(0);
+  };
+
+  /* ---- DRIVE FOLDER ---- */
+  window.txSaveFolder = function(){
+    const v = document.getElementById('txFolderLink').value.trim();
+    localStorage.setItem(LS_FOLDER, v);
+    document.getElementById('txFolderMsg').textContent='✓ saved';
+    setTimeout(()=>document.getElementById('txFolderMsg').textContent='',1500);
+    txRenderThumbs();
+  };
+
+  /* Build a Drive image URL by FILE ID (works for link-shared files). */
+  function driveImg(fileId){
+    return 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w1200';
+  }
+  function driveOpen(fileId){ return 'https://drive.google.com/file/d/'+fileId+'/view'; }
+
+  /* ---- THUMBNAILS ----
+     The page cannot LIST a folder client-side. So image file IDs come from the
+     backend (Apps Script getFileIds) and are merged onto the record as
+     r.img_ECG1, r.img_ECG2, r.img_MSL, r.img_Depth (file IDs).            */
+  window.txRenderThumbs = function(){
+    const wrap = document.getElementById('txThumbs');
+    const sid  = document.getElementById('studyId')?.value.trim();
+    const rec  = (window.allRecords||[]).find(r=>String(r.studyId).trim()===sid) || {};
+    const folder = localStorage.getItem(LS_FOLDER);
+    wrap.innerHTML = IMG_KINDS.map(k=>{
+      const fileId = rec['img_'+k.key];           // file ID from backend lookup
+      const expectName = sid ? `${sid}_${k.key}` : `{ID}_${k.key}`;
+      if(fileId){
+        return `<div class="tx-thumb">
+          <div class="tx-lbl">${k.lbl}
+            <a class="tx-open" href="${driveOpen(fileId)}" target="_blank">open ↗</a></div>
+          <img src="${driveImg(fileId)}" alt="${expectName}"
+               onclick="window.open('${driveOpen(fileId)}','_blank')"
+               onerror="this.outerHTML='<div class=&quot;tx-missing&quot;>Image not viewable.<br>Check folder sharing = Anyone with link.</div>'">
+          ${k.key.startsWith('ECG')
+            ? `<button class="tx-cal-btn" onclick="txCalOpen('${driveImg(fileId)}')">📐 Open caliper</button>`:''}
+        </div>`;
+      }
+      return `<div class="tx-thumb">
+        <div class="tx-lbl">${k.lbl}</div>
+        <div class="tx-missing">Expected file:<br><b>${expectName}</b><br>
+          ${folder?'(not found in folder yet)':'(set folder link above)'}</div>
+      </div>`;
+    }).join('');
+  };
+
+  /* ════════ CALIPER ════════ */
+  let cal = { ratio:null, unit:'ms', pts:[], img:new Image(), scale:1, mode:'calibrate' };
+
+  window.txCalOpen = function(src){
+    cal = { ratio:null, unit:'ms', pts:[], img:new Image(), scale:1, mode:'calibrate' };
+    document.getElementById('txCalOverlay').classList.add('show');
+    document.getElementById('txCalRead').textContent='not calibrated';
+    document.getElementById('txCalStep').textContent='Step 1 — Calibrate';
+    document.getElementById('txCalHint').textContent='Click two points a KNOWN distance apart, then enter that distance & press Set calibration.';
+    document.getElementById('txCalWrite').disabled=true;
+    cal.img.crossOrigin='anonymous';
+    cal.img.onload = txCalFit;
+    cal.img.onerror= ()=>{ document.getElementById('txCalHint').textContent=
+      '⚠ Could not load image (folder must be shared “Anyone with link”). You can still right-click→save and use the field manually.'; };
+    cal.img.src = src;
+  };
+  function txCalFit(){
+    const stage=document.getElementById('txCalStage');
+    const W=stage.clientWidth, H=stage.clientHeight;
+    cal.scale=Math.min(W/cal.img.width, H/cal.img.height);
+    const dw=cal.img.width*cal.scale, dh=cal.img.height*cal.scale;
+    ['txCalImg','txCalDraw'].forEach(id=>{const c=document.getElementById(id);
+      c.width=dw;c.height=dh;c.style.left=((W-dw)/2)+'px';c.style.top=((H-dh)/2)+'px';});
+    document.getElementById('txCalImg').getContext('2d').drawImage(cal.img,0,0,dw,dh);
+    txCalRedraw();
+  }
+  document.getElementById('txCalDraw').addEventListener('click',function(e){
+    const r=this.getBoundingClientRect();
+    const p={x:e.clientX-r.left, y:e.clientY-r.top};
+    if(cal.pts.length>=2) cal.pts=[];
+    cal.pts.push(p);
+    txCalRedraw();
+    if(cal.pts.length===2 && cal.ratio){ txShowDistance(); }
+  });
+  function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+  function txCalRedraw(){
+    const c=document.getElementById('txCalDraw'), ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.strokeStyle='#7fe3a4';ctx.fillStyle='#7fe3a4';ctx.lineWidth=2;
+    cal.pts.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,4,0,7);ctx.fill();});
+    if(cal.pts.length===2){
+      ctx.beginPath();ctx.moveTo(cal.pts[0].x,cal.pts[0].y);
+      ctx.lineTo(cal.pts[1].x,cal.pts[1].y);ctx.stroke();
+    }
+  }
+  window.txSetCalibration=function(){
+    if(cal.pts.length<2){document.getElementById('txCalHint').textContent='Click TWO points first.';return;}
+    const known=parseFloat(document.getElementById('txCalKnown').value);
+    if(!known){document.getElementById('txCalHint').textContent='Enter the known distance value.';return;}
+    cal.unit=document.getElementById('txCalUnit').value;
+    cal.ratio=known/dist(cal.pts[0],cal.pts[1]);          // value per pixel
+    cal.pts=[];txCalRedraw();
+    document.getElementById('txCalRead').textContent=
+      `calibrated: ${cal.ratio.toFixed(3)} ${cal.unit}/px`;
+    document.getElementById('txCalStep').textContent='Step 2 — Measure';
+    document.getElementById('txCalHint').textContent='Now click the two points you want to measure (e.g. QRS onset → offset).';
+  };
+  function txShowDistance(){
+    const val=dist(cal.pts[0],cal.pts[1])*cal.ratio;
+    document.getElementById('txCalRead').textContent=
+      `measured: ${val.toFixed(1)} ${cal.unit}`;
+    document.getElementById('txCalWrite').disabled=false;
+    cal._lastVal=val;
+  }
+  window.txWriteMeasure=function(){
+    if(cal._lastVal==null)return;
+    const tgt=document.getElementById('txCalTarget').value;
+    const el=document.getElementById(tgt);
+    if(el){ el.value=Math.round(cal._lastVal*10)/10;
+      const base=tgt.replace('ecg_','').replace(/_(pre|post)$/,'');
+      if(typeof calcECGDelta==='function') calcECGDelta(base);
+      el.style.background='#dff5e7'; setTimeout(()=>el.style.background='',900);
+    }
+    document.getElementById('txCalRead').textContent='✓ recorded to '+tgt;
+  };
+  window.txCalReset=function(){cal.pts=[];cal._lastVal=null;
+    document.getElementById('txCalWrite').disabled=true;txCalRedraw();
+    document.getElementById('txCalRead').textContent= cal.ratio?
+      `calibrated: ${cal.ratio.toFixed(3)} ${cal.unit}/px`:'not calibrated';};
+  window.txCalClose=function(){document.getElementById('txCalOverlay').classList.remove('show');};
+
+  /* ---- boot after the original DOMContentLoaded init has run ---- */
+  window.addEventListener('DOMContentLoaded', ()=>setTimeout(txInject, 0));
+})();
+</script>
 </body>
 </html>
