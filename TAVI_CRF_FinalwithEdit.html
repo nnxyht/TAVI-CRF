@@ -1604,8 +1604,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if(!id){ msg.textContent='Enter an ID first'; return; }
     msg.textContent='Searching…';
     try{
-      if(!window.allRecords || !allRecords.length){
-        await loadRecords();                       // pull from Sheets if not loaded
+    await loadRecords();                     // pull from Sheets if not loaded
       }
       const idx = allRecords.findIndex(r=>String(r.studyId).trim()===id);
       if(idx<0){ msg.textContent='✗ No record for '+id; return; }
