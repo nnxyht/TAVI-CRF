@@ -247,7 +247,7 @@ function ecgTable(){
 function getWritable(){
   const o={};
   FIELDS.forEach(f=>{
-    if(!(f.writable)) return;
+    if(!(f.writable || f.derived)) return;
     if(f.kind==="flag"){
       const r=document.querySelector(`input[name="${f.key}"]:checked`);
       o[f.key]=r?r.value:"";
