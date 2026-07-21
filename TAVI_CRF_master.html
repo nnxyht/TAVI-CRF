@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TAVI CRF — Electrophysiologic Remodeling</title>
+<style>
+:root{
+  --ink:#12203a; --ink2:#3d5170; --line:#dfe5ef; --bg:#f4f6fb; --card:#ffffff;
+  --primary:#2f5e8c; --primary-d:#234a71; --accent:#0d9488;
+  --fill-need:#fff7ed; --fill-need-line:#f59e0b; --need-text:#b45309;
+  --reg:#eef5ee; --reg-line:#86b989; --phi:#c0392b;
+  --radius:12px; --shadow:0 1px 2px rgba(16,32,60,.06),0 8px 24px rgba(16,32,60,.06);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Noto Sans Thai",sans-serif;
+  color:var(--ink);background:var(--bg);font-size:14px;line-height:1.45}
+a{color:var(--primary)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px 80px}
+
+header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#16273f,#12203a);
+  color:#eaf1fb;box-shadow:0 2px 14px rgba(8,18,36,.28)}
+.top .inner{max-width:1080px;margin:0 auto;padding:12px 18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.top h1{font-size:15px;margin:0;font-weight:650;letter-spacing:.2px}
+.top h1 small{display:block;font-weight:400;color:#9fb4d4;font-size:11.5px;letter-spacing:.3px}
+.idbar{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.idbar input{padding:8px 11px;border-radius:9px;border:1px solid #35507a;background:#0f1c31;color:#eaf1fb;
+  font-size:13px;width:150px}
+.idbar input::placeholder{color:#7f97bd}
+.btn{border:0;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:.15s}
+.btn{background:#31547e;color:#fff}
+.btn:hover{background:#3a5680}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent;border:1px solid #43608c;color:#cfe0f6}
+.btn.ghost:hover{background:#1a2b47}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.meter{display:flex;align-items:center;gap:10px;margin:16px 0 6px}
+.meter .track{flex:1;height:9px;background:#e3e9f3;border-radius:6px;overflow:hidden}
+.meter .bar{height:100%;background:linear-gradient(90deg,#0d9488,#22b8a6);width:0;transition:width .3s}
+.meter .pct{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink2);min-width:132px;text-align:right;font-size:12.5px}
+
+.status{font-size:12.5px;padding:6px 12px;border-radius:8px;margin:8px 0;display:none}
+.status.show{display:block}
+.status.ok{background:#e7f6ef;color:#0f7a52}
+.status.err{background:#fdeceb;color:#b3261e}
+.status.info{background:#eaf1fb;color:#254a71}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:4px 0 14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+.dot.need{background:var(--fill-need);border-color:var(--fill-need-line)}
+.dot.reg{background:var(--reg);border-color:var(--reg-line)}
+
+section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);margin:14px 0;overflow:hidden}
+.card > h2{margin:0;padding:13px 18px;font-size:14px;font-weight:680;color:var(--ink);
+  background:#f7f9fd;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;cursor:default}
+.card > h2 .tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.4px}
+.tag.fellow{background:#fef3c7;color:#92600a}
+.tag.gate{background:#e5edf7;color:#2f5e8c}
+.card .body{padding:16px 18px}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 22px}
+.grid.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field > label{font-size:12.5px;color:var(--ink2);font-weight:560}
+.field .src{font-size:10px;font-weight:700;letter-spacing:.3px;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle}
+.src.need{background:var(--fill-need);color:var(--need-text)}
+.src.reg{background:var(--reg);color:#3f7a42}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;
+  font:inherit;font-size:13px;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid #bcd4f0;border-color:var(--primary)}
+input[readonly]{background:#f2f5fa;color:var(--ink2);font-weight:600}
+textarea{resize:vertical;min-height:46px}
+.field.empty input:not([readonly]),.field.empty select,.field.empty textarea{
+  background:var(--fill-need);border-color:var(--fill-need-line)}
+
+.yn{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;height:36px}
+.yn label{display:flex;align-items:center;justify-content:center;padding:0 14px;font-size:12.5px;
+  cursor:pointer;color:var(--ink2);user-select:none;background:#fff}
+.yn label + label{border-left:1px solid var(--line)}
+.yn input{position:absolute;opacity:0;pointer-events:none}
+.yn input:checked + span{}
+.yn label:has(input:checked){background:var(--primary);color:#fff;font-weight:650}
+.yn label.no:has(input:checked){background:#64748b}
+.field.empty .yn{border-color:var(--fill-need-line)}
+.yn-clear{font-size:11px;color:var(--ink2);background:none;border:0;cursor:pointer;text-decoration:underline;padding:0 2px}
+
+table.ecg{width:100%;border-collapse:collapse}
+table.ecg th,table.ecg td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12.5px}
+table.ecg th{color:var(--ink2);font-weight:620;background:#f7f9fd}
+table.ecg td:first-child{font-weight:560;color:var(--ink)}
+table.ecg input{padding:6px 8px}
+table.ecg .d input{background:#f2f5fa;font-weight:650;color:var(--ink)}
+
+.ref{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 20px}
+.ref .r{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dotted #e7ecf5}
+.ref .r span:first-child{color:var(--ink2)}
+.ref .r span:last-child{font-weight:600;font-variant-numeric:tabular-nums}
+.ref-empty{color:var(--ink2);font-size:12.5px;padding:4px 0}
+details.refwrap summary{cursor:pointer;font-weight:600;color:var(--primary);padding:2px 0}
+
+.phi-note{font-size:12px;color:var(--phi);background:#fdeff0;border:1px solid #f3c9cc;
+  padding:8px 12px;border-radius:9px;margin:6px 0 0}
+.config-note{font-size:12px;color:var(--ink2);background:#fff8e6;border:1px solid #f5e2ad;padding:10px 12px;border-radius:9px}
+.hide{display:none !important}
+@media(max-width:720px){.grid,.grid.c3,.ref{grid-template-columns:1fr}.idbar input{width:120px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="inner">
+    <h1>TAVI — Quantitative EP Remodeling<small>Case Record Form · King Chulalongkorn Memorial Hospital</small></h1>
+    <div class="idbar">
+      <input id="searchId" placeholder="Study ID e.g. TAVI-0001" autocomplete="off"/>
+      <button class="btn" id="btnLoad">Load</button>
+      <button class="btn ghost" id="btnNew">New</button>
+      <button class="btn primary" id="btnSave">Save</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="meter">
+    <div class="track"><div class="bar" id="bar"></div></div>
+    <div class="pct" id="pct">— of — fields filled</div>
+  </div>
+  <div class="legend">
+    <span><i class="dot need"></i> To fill (study team)</span>
+    <span><i class="dot reg"></i> From registry — editable</span>
+    <span>Empty required fields are highlighted amber.</span>
+  </div>
+  <div class="status" id="status"></div>
+  <div id="form"></div>
+  <p style="font-size:11.5px;color:#8090ab;margin-top:20px">
+    Reference (registry) data is read-only and stored in the sheet only. Saving writes back study-collected
+    fields and never overwrites reference columns.
+  </p>
+</div>
+
+<script>
+/* ==== CONFIG: paste your deployed Apps Script Web App URL here ==== */
+const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+const FIELDS = [{"key": "study_id", "label": "Study ID", "group": "ID", "kind": "text", "section": "record", "writable": false, "derived": false}, {"key": "a_msl_mm", "label": "Membranous septum length (mm)", "group": "A", "kind": "num", "section": "imaging", "writable": true, "derived": false}, {"key": "a_lvot_calcification", "label": "LVOT calcification", "group": "A", "kind": "select:Absent;Mild;Moderate;Severe", "section": "imaging", "writable": true, "derived": false}, {"key": "a_basal_septal_calcification", "label": "Basal septal calcification", "group": "A", "kind": "select:Absent;Present", "section": "imaging", "writable": true, "derived": false}, {"key": "a_mitral_annular_calcification", "label": "Mitral annular calcification", "group": "A", "kind": "select:Absent;Mild;Moderate;Severe", "section": "imaging", "writable": true, "derived": false}, {"key": "a_implantation_depth_ncc_mm", "label": "Implantation depth at NCC (mm)", "group": "A", "kind": "num", "section": "procedure", "writable": true, "derived": false}, {"key": "a_oversizing_ratio_pct", "label": "Oversizing ratio (%)", "group": "A", "kind": "num", "section": "procedure", "writable": true, "derived": false}, {"key": "a_sdims_pct", "label": "sDIMs (%) = Depth / MSL x 100", "group": "A", "kind": "derived", "section": "procedure", "writable": false, "derived": true}, {"key": "a_delta_msid_mm", "label": "delta-MSID (mm) = MSL - Depth", "group": "A", "kind": "derived", "section": "procedure", "writable": false, "derived": true}, {"key": "a_ecg_base_hr", "label": "Baseline HR (bpm)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_pr", "label": "Baseline PR (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_qrs", "label": "Baseline QRS (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_qt", "label": "Baseline QT (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_qtc", "label": "Baseline QTc (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_axis", "label": "Baseline Frontal QRS axis (deg)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_tpte", "label": "Baseline Tp-Te (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_base_ctpte", "label": "Baseline cTp-Te (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_hr", "label": "Post-TAVI HR (bpm)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_pr", "label": "Post-TAVI PR (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_qrs", "label": "Post-TAVI QRS (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_qt", "label": "Post-TAVI QT (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_qtc", "label": "Post-TAVI QTc (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_axis", "label": "Post-TAVI Frontal QRS axis (deg)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_tpte", "label": "Post-TAVI Tp-Te (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_post_ctpte", "label": "Post-TAVI cTp-Te (ms)", "group": "A", "kind": "num", "section": "ecg", "writable": true, "derived": false}, {"key": "a_ecg_delta_hr", "label": "delta HR", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_pr", "label": "delta PR", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_qrs", "label": "delta QRS", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_qt", "label": "delta QT", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_qtc", "label": "delta QTc", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_axis", "label": "delta Axis", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_tpte", "label": "delta Tp-Te", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_ecg_delta_ctpte", "label": "delta cTp-Te", "group": "A", "kind": "derived", "section": "ecg", "writable": false, "derived": true}, {"key": "a_pre_avb", "label": "Pre-existing 1st-degree AVB", "group": "A", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "a_post_new_lbbb", "label": "New-onset LBBB", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_new_rbbb", "label": "New-onset RBBB", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_fascicular", "label": "Fascicular block (LAFB/LPFB)", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_alternating_bbb", "label": "Alternating BBB", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_avb1", "label": "New/worsening 1st-degree AVB", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_havb", "label": "High-degree AV block", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_post_ivcd", "label": "IVCD", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_ppmi_after_tavi", "label": "PPMI after TAVI", "group": "A", "kind": "flag", "section": "conduction", "writable": true, "derived": false}, {"key": "a_ppmi_date", "label": "Date of PPMI", "group": "A", "kind": "date", "section": "conduction", "writable": true, "derived": false}, {"key": "a_ppmi_indication", "label": "Indication for PPMI", "group": "A", "kind": "text", "section": "conduction", "writable": true, "derived": false}, {"key": "b_age", "label": "Age (years)", "group": "B", "kind": "num", "section": "baseline", "writable": true, "derived": false}, {"key": "b_sex", "label": "Sex", "group": "B", "kind": "text", "section": "baseline", "writable": true, "derived": false}, {"key": "b_cad", "label": "CAD", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_prev_mi", "label": "Previous MI", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_stroke_hx", "label": "Stroke (hx)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_pad", "label": "PAD", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_af_afl_hx", "label": "AF/AFL (hx)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_ckd", "label": "CKD", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_pht", "label": "Pulmonary HT", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_hf_hx", "label": "Heart failure (hx)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_calcified_aorta", "label": "Calcified/porcelain aorta", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_chest_rt", "label": "Chest radiotherapy", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_liver_disease", "label": "Liver disease", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_copd", "label": "COPD", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_smoke", "label": "Smoking", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_ht", "label": "Hypertension", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_dm", "label": "Diabetes", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_dlp", "label": "Dyslipidemia", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_arrest_hx", "label": "Cardiac arrest (hx)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_cardiogenic_shock_hx", "label": "Cardiogenic shock (hx)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_cabg", "label": "Prior CABG", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_pci", "label": "Prior PCI", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_balloon_valvulo", "label": "Prior balloon valvuloplasty", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_cardiac_sx", "label": "Prior cardiac surgery", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_preexisting_ppm", "label": "Pre-existing PPM/ICD/CRT (exclusion)", "group": "B", "kind": "flag", "section": "baseline", "writable": true, "derived": false}, {"key": "b_sts_score", "label": "STS-PROM (%)", "group": "B", "kind": "num", "section": "baseline", "writable": true, "derived": false}, {"key": "b_frailty_score", "label": "Frailty score", "group": "B", "kind": "num", "section": "baseline", "writable": true, "derived": false}, {"key": "b_nyha", "label": "NYHA class", "group": "B", "kind": "num", "section": "baseline", "writable": true, "derived": false}, {"key": "b_med_aspirin", "label": "Aspirin", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_p2y12", "label": "P2Y12 inhibitor", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_vka", "label": "VKA (warfarin)", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_doac", "label": "DOAC", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_lmwh", "label": "LMWH", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_bb", "label": "Beta-blocker", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_ccb", "label": "CCB", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_amiodarone", "label": "Amiodarone", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_statin", "label": "Statin", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_ohg", "label": "Oral hypoglycemic", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_insulin", "label": "Insulin", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_med_lasix", "label": "Furosemide", "group": "B", "kind": "flag", "section": "meds", "writable": true, "derived": false}, {"key": "b_base_nsr", "label": "Baseline sinus rhythm", "group": "B", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "b_base_af_afl", "label": "Baseline AF/AFL", "group": "B", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "b_base_lbbb", "label": "Baseline LBBB", "group": "B", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "b_base_rbbb", "label": "Baseline RBBB", "group": "B", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "b_base_chb", "label": "Baseline complete heart block", "group": "B", "kind": "flag", "section": "rhythm", "writable": true, "derived": false}, {"key": "b_valve_brand", "label": "Valve brand/model", "group": "B", "kind": "text", "section": "procedure", "writable": true, "derived": false}, {"key": "b_valve_type", "label": "Valve type", "group": "B", "kind": "text", "section": "procedure", "writable": true, "derived": false}, {"key": "b_valve_size_mm", "label": "Valve size (mm)", "group": "B", "kind": "num", "section": "procedure", "writable": true, "derived": false}, {"key": "b_post_dilatation", "label": "Post-dilatation", "group": "B", "kind": "text", "section": "procedure", "writable": true, "derived": false}, {"key": "b_sheath_size", "label": "Sheath size (Fr)", "group": "B", "kind": "num", "section": "procedure", "writable": true, "derived": false}, {"key": "b_access_route", "label": "Vascular access route", "group": "B", "kind": "text", "section": "procedure", "writable": true, "derived": false}, {"key": "b_lvef_pre", "label": "LVEF pre-TAVI (%)", "group": "B", "kind": "num", "section": "imaging", "writable": true, "derived": false}, {"key": "b_mean_av_gradient_pre", "label": "Mean AV gradient pre-TAVI (mmHg)", "group": "B", "kind": "num", "section": "imaging", "writable": true, "derived": false}, {"key": "b_annulus_diameter_ct", "label": "Aortic annulus diameter, CT (mm)", "group": "B", "kind": "num", "section": "imaging", "writable": true, "derived": false}, {"key": "b_av_calcium_score", "label": "AV calcium score (Agatston)", "group": "B", "kind": "num", "section": "imaging", "writable": true, "derived": false}, {"key": "cied_type", "label": "CIED type", "group": "CIED", "kind": "select:PPM;ICD;CRT", "section": "cied", "writable": true, "derived": false}, {"key": "cied_interrogation_date", "label": "Date of interrogation", "group": "CIED", "kind": "date", "section": "cied", "writable": true, "derived": false}, {"key": "cied_mode", "label": "Mode of device", "group": "CIED", "kind": "text", "section": "cied", "writable": true, "derived": false}, {"key": "cied_lead_impedance_a", "label": "Lead impedance A (ohm)", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_lead_impedance_v", "label": "Lead impedance V (ohm)", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_threshold_a", "label": "Threshold A (V)", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_threshold_v", "label": "Threshold V (V)", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_pace_pct_a", "label": "%Pace A", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_pace_pct_v", "label": "%Pace V", "group": "CIED", "kind": "num", "section": "cied", "writable": true, "derived": false}, {"key": "cied_pacemaker_dependency", "label": "Pacemaker dependency (%Vp>=90%)", "group": "CIED", "kind": "flag", "section": "cied", "writable": true, "derived": false}, {"key": "cied_event", "label": "Event", "group": "CIED", "kind": "select:None;AF;AT;NSVT/VT", "section": "cied", "writable": true, "derived": false}, {"key": "case_note", "label": "Case note (coordination)", "group": "NOTE", "kind": "text", "section": "record", "writable": true, "derived": false}, {"key": "c_date_tavi", "label": "Date of TAVI", "group": "C", "kind": "date", "section": "reference", "writable": false, "derived": false}, {"key": "c_bw_kg", "label": "Body weight (kg)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_height_cm", "label": "Height (cm)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_bmi", "label": "BMI", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_bp_sys", "label": "BP systolic", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_bp_dia", "label": "BP diastolic", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_clin_hr", "label": "Clinical HR", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_sympt_chest_pain", "label": "Chest pain", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_sympt_hf", "label": "HF symptom", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_sympt_dyspnea", "label": "Dyspnea", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_sympt_syncope", "label": "Syncope", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvedd", "label": "LVEDD", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvesd", "label": "LVESD", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvot_diam", "label": "LVOT diameter", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ao_sinus_echo", "label": "Ao sinus (echo)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ao_annulus_echo", "label": "Ao annulus (echo)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ao_stj_echo", "label": "Sinotubular junction (echo)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_asc_ao_echo", "label": "Ascending Ao (echo)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_valve_calcific", "label": "Calcific valve", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_valve_rheumatic", "label": "Rheumatic valve", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_unicuspid", "label": "Unicuspid", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_bicuspid", "label": "Bicuspid", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_tricuspid", "label": "Tricuspid", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_quadricuspid", "label": "Quadricuspid", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ca_mild", "label": "Ca mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ca_mod", "label": "Ca moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ca_severe", "label": "Ca severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ava_vti", "label": "AVA (VTI)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ava_vel", "label": "AVA (velocity)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_av_vmax", "label": "AV Vmax", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_av_ppg", "label": "AV peak gradient", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvot_vmax", "label": "LVOT Vmax", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvot_vti", "label": "LVOT VTI", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvot_ppg", "label": "LVOT peak grad", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lvot_mpg", "label": "LVOT mean grad", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_svi", "label": "Stroke volume index", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ar_none", "label": "AR none", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ar_mild", "label": "AR mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ar_mod", "label": "AR moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ar_severe", "label": "AR severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_rvsp", "label": "RVSP", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_tr_none", "label": "TR none", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_tr_trivial", "label": "TR trivial", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_tr_mild", "label": "TR mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_tr_mod", "label": "TR moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_tr_severe", "label": "TR severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_pr_vmax", "label": "PR Vmax", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_padp", "label": "PADP", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_mpap", "label": "mPAP", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_effusion", "label": "Pericardial effusion", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ms_none", "label": "MS none", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ms_trivial", "label": "MS trivial", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ms_mild", "label": "MS mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ms_mod", "label": "MS moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ms_severe", "label": "MS severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_mr_none", "label": "MR none", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_mr_trivial", "label": "MR trivial", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_mr_mild", "label": "MR mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_mr_mod", "label": "MR moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_mr_severe", "label": "MR severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_ava", "label": "AVA (CT)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_perimeter", "label": "Annulus perimeter (CT)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_asce_ao", "label": "Ascending Ao (CT)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_ao_sinus", "label": "Sinus of Valsalva (CT)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_stj", "label": "STJ (CT)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_stj_ht", "label": "STJ height", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_rt_co_ht", "label": "Right coronary height", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ct_lt_co_ht", "label": "Left coronary height", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_rt_cia", "label": "Rt common iliac", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_rt_eia", "label": "Rt external iliac", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_rt_femo", "label": "Rt femoral", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lt_cia", "label": "Lt common iliac", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lt_eia", "label": "Lt external iliac", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_lt_femo", "label": "Lt femoral", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_cor_normal", "label": "Coronary normal/insignificant", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_cor_tvd", "label": "Triple-vessel disease", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_cor_dvd", "label": "Double-vessel disease", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_cor_svd", "label": "Single-vessel disease", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_creatinine", "label": "Creatinine (mg/dL)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_ind_inoperable", "label": "Inoperable", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ind_high_risk", "label": "High surgical risk", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ind_pt_prefer", "label": "Patient preference", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_anes_local", "label": "Local anesthesia", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_anes_general", "label": "General anesthesia", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_rapid_pacing", "label": "Rapid pacing used", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_fem", "label": "Access: femoral", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_sub", "label": "Access: subclavian", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_tranao", "label": "Access: transaortic", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_tranil", "label": "Access: transiliac", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_apex", "label": "Access: transapical", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_carotid", "label": "Access: carotid", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_ac_caval", "label": "Access: transcaval", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_pre_dilatation", "label": "Pre-dilatation", "group": "C", "kind": "text", "section": "reference", "writable": false, "derived": false}, {"key": "c_pre_bal_brand", "label": "Pre-balloon brand", "group": "C", "kind": "text", "section": "reference", "writable": false, "derived": false}, {"key": "c_pre_bal_size", "label": "Pre-balloon size", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_bal_brand", "label": "Post-balloon brand", "group": "C", "kind": "text", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_bal_size", "label": "Post-balloon size", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_mi", "label": "MI", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_endocarditis", "label": "Endocarditis", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_chb", "label": "Complete heart block", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_arrest", "label": "Cardiac arrest", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_af_afl", "label": "New AF/AFL", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_annu_disse", "label": "Annular dissection/rupture", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_ao_disse", "label": "Aortic dissection", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_perf_tampo", "label": "Perforation/tamponade", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_tia_stroke", "label": "TIA/Stroke", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_acc_bleed", "label": "Access bleeding", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_acc_hema", "label": "Access hematoma", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_embo_lv", "label": "Embolization to LV", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_embo_ao", "label": "Embolization to Ao", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_recapture", "label": "Recapture/reposition", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_unplan_ci", "label": "Unplanned cardiac intervention", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_unplan_sx", "label": "Unplanned surgery", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_unplan_pci", "label": "Unplanned PCI", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_post_nsr", "label": "Post-procedure sinus rhythm", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_new_q", "label": "New Q wave", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_comp_chb_bb", "label": "New CHB/BBB", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mr_none", "label": "MR none (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mr_trace", "label": "MR trace (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mr_mild", "label": "MR mild (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mr_mod", "label": "MR moderate (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mr_severe", "label": "MR severe (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ar_none", "label": "AR none (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ar_trace", "label": "AR trace (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ar_mild", "label": "AR mild (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ar_mod", "label": "AR moderate (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ar_severe", "label": "AR severe (post)", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_para_none", "label": "Paravalvular none", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_para_trace", "label": "Paravalvular trace", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_para_mild", "label": "Paravalvular mild", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_para_mod", "label": "Paravalvular moderate", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_para_severe", "label": "Paravalvular severe", "group": "C", "kind": "flag", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ava", "label": "AVA (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_av_peak_vel", "label": "AV peak velocity (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_mpg", "label": "Mean gradient (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_ppg", "label": "Peak gradient (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_lvef", "label": "LVEF (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_nyfc", "label": "NYHA class (post)", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_survival_1yr", "label": "Survival 1 year", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_survival_status_date", "label": "Survival status at date", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_intervention_note", "label": "Intervention registry note", "group": "C", "kind": "text", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_savr_vmax", "label": "ViV AV Vmax", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_savr_ppg", "label": "ViV AV peak grad", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}, {"key": "c_post_savr_mpg", "label": "ViV AV mean grad", "group": "C", "kind": "num", "section": "reference", "writable": false, "derived": false}];
+
+const SECTIONS = [
+  ["baseline","Baseline — Demographics & Comorbidities",null,null],
+  ["meds","Baseline — Medications",null,null],
+  ["rhythm","Baseline — Rhythm & Conduction",null,null],
+  ["imaging","Imaging & Anatomy",null,null],
+  ["procedure","Procedure & Implantation",null,null],
+  ["ecg","ECG — Baseline / Post-TAVI / Δ",null,null],
+  ["conduction","Post-TAVI Conduction & PPMI",null,null],
+  ["cied","CIED Interrogation","4.5","fellow"],
+  ["reference","Registry Reference (read-only)",null,null]
+];
+
+const byKey = {}; FIELDS.forEach(f=>byKey[f.key]=f);
+const $=id=>document.getElementById(id);
+const opts = f => (f.kind.startsWith("select:")? f.kind.split(":")[1].split(";"):[]);
+
+/* ---------- render ---------- */
+function ctrl(f){
+  const id="fld_"+f.key;
+  if(f.kind==="flag"){
+    return `<div class="yn" data-key="${f.key}">
+      <label class="yes"><input type="radio" name="${f.key}" value="1"><span>Yes</span></label>
+      <label class="no"><input type="radio" name="${f.key}" value="0"><span>No</span></label>
+    </div><button type="button" class="yn-clear" data-clear="${f.key}">clear</button>`;
+  }
+  if(f.kind.startsWith("select:")){
+    const o=opts(f).map(v=>`<option value="${v}">${v}</option>`).join("");
+    return `<select id="${id}" data-key="${f.key}"><option value=""></option>${o}</select>`;
+  }
+  if(f.kind==="date") return `<input type="date" id="${id}" data-key="${f.key}">`;
+  if(f.kind==="text"){
+    if(f.key==="a_ppmi_indication"||f.key==="case_note"||f.key==="cied_mode")
+      return `<textarea id="${id}" data-key="${f.key}"></textarea>`;
+    return `<input type="text" id="${id}" data-key="${f.key}">`;
+  }
+  if(f.derived) return `<input type="number" id="${id}" data-key="${f.key}" readonly>`;
+  return `<input type="number" step="any" id="${id}" data-key="${f.key}">`;
+}
+function srcTag(f){
+  if(f.group==="A"||f.group==="CIED") return `<span class="src need">fill</span>`;
+  if(f.group==="B") return `<span class="src reg">registry</span>`;
+  return "";
+}
+function fieldHTML(f){
+  return `<div class="field" data-fieldkey="${f.key}">
+    <label>${f.label}${srcTag(f)}</label>${ctrl(f)}</div>`;
+}
+
+function buildForm(){
+  let html="";
+  // record/search card
+  html+=`<section class="card"><div class="body">
+    <div class="grid"><div class="field"><label>Study ID</label>
+      <input type="text" id="fld_study_id" data-key="study_id" readonly></div>
+    <div class="field"><label>Case note (coordination) ${srcTag(byKey.case_note)}</label>
+      <textarea id="fld_case_note" data-key="case_note"></textarea></div></div>
+    <div class="phi-note">Patient identifiers are not stored here. Re-identify only via the offline linkage key.</div>
+  </div></section>`;
+
+  SECTIONS.forEach(([sec,title,num,badge])=>{
+    if(sec==="reference"){
+      html+=`<section class="card" id="sec_reference"><h2>${title}</h2>
+        <div class="body"><details class="refwrap"><summary>Show registry data for this case</summary>
+        <div class="ref" id="refBox"><div class="ref-empty">Load a Study ID to view.</div></div></details></div></section>`;
+      return;
+    }
+    const fs=FIELDS.filter(f=>f.section===sec);
+    if(!fs.length) return;
+    const tag = badge==="fellow"?`<span class="tag fellow">fellow</span>`:"";
+    const g = num?`<span class="tag gate">shown if 4.4 = Yes</span>`:"";
+    let inner;
+    if(sec==="ecg") inner=ecgTable();
+    else {
+      const cls = (sec==="meds"||sec==="baseline")?"grid c3":"grid";
+      inner=`<div class="${cls}">`+fs.map(fieldHTML).join("")+`</div>`;
+    }
+    const hid = sec==="cied"?"hide":"";
+    html+=`<section class="card ${hid}" id="sec_${sec}" data-section="${sec}">
+      <h2>${num?num+"  ":""}${title} ${tag}${g}</h2><div class="body">${inner}</div></section>`;
+  });
+  $("form").innerHTML=html;
+  wire();
+}
+
+function ecgTable(){
+  const params=[["hr","HR (bpm)"],["pr","PR (ms)"],["qrs","QRS (ms)"],["qt","QT (ms)"],
+    ["qtc","QTc (ms)"],["axis","Frontal axis (°)"],["tpte","Tp-Te (ms)"],["ctpte","cTp-Te (ms)"]];
+  let rows=params.map(([p,l])=>`<tr>
+    <td>${l}</td>
+    <td><input type="number" step="any" data-key="a_ecg_base_${p}"></td>
+    <td><input type="number" step="any" data-key="a_ecg_post_${p}"></td>
+    <td class="d"><input type="number" step="any" data-key="a_ecg_delta_${p}" readonly></td></tr>`).join("");
+  return `<table class="ecg"><thead><tr><th>Parameter</th><th>Baseline</th><th>Post-TAVI (48–72h)</th><th>Δ change</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+/* ---------- get / set ---------- */
+function getWritable(){
+  const o={};
+  FIELDS.forEach(f=>{
+    if(!(f.writable)) return;
+    if(f.kind==="flag"){
+      const r=document.querySelector(`input[name="${f.key}"]:checked`);
+      o[f.key]=r?r.value:"";
+    } else {
+      const el=document.querySelector(`[data-key="${f.key}"]`);
+      o[f.key]=el?el.value:"";
+    }
+  });
+  return o;
+}
+function setField(key,val){
+  const f=byKey[key]; if(!f) return;
+  if(f.kind==="flag"){
+    const v=(val===1||val==="1"||val==="Yes")?"1":(val===0||val==="0"||val==="No")?"0":"";
+    document.querySelectorAll(`input[name="${key}"]`).forEach(r=>r.checked=(r.value===v));
+    return;
+  }
+  const el=document.querySelector(`[data-key="${key}"]`); if(!el) return;
+  if(f.kind==="date" && val){ el.value=String(val).slice(0,10); }
+  else el.value=(val==null?"":val);
+}
+function clearForm(keepId){
+  FIELDS.forEach(f=>{
+    if(f.section==="reference") return;
+    if(f.key==="study_id"&&keepId) return;
+    if(f.kind==="flag") document.querySelectorAll(`input[name="${f.key}"]`).forEach(r=>r.checked=false);
+    else { const el=document.querySelector(`[data-key="${f.key}"]`); if(el) el.value=""; }
+  });
+  $("refBox").innerHTML='<div class="ref-empty">Load a Study ID to view.</div>';
+  toggleCIED(); computeDerived(); updateMeter();
+}
+function fillReference(rec){
+  const refs=FIELDS.filter(f=>f.group==="C");
+  const rows=refs.map(f=>{
+    let v=rec[f.key]; if(v==null||v==="") return "";
+    if(f.kind==="flag") v=(v==1||v==="1")?"Yes":(v==0||v==="0")?"No":v;
+    return `<div class="r"><span>${f.label}</span><span>${v}</span></div>`;
+  }).filter(Boolean).join("");
+  $("refBox").innerHTML = rows||'<div class="ref-empty">No registry data recorded for this case.</div>';
+}
+
+/* ---------- derived ---------- */
+function num(key){const el=document.querySelector(`[data-key="${key}"]`);const v=el?parseFloat(el.value):NaN;return isFinite(v)?v:null;}
+function put(key,v){const el=document.querySelector(`[data-key="${key}"]`);if(el)el.value=(v==null?"":v);}
+function computeDerived(){
+  const msl=num("a_msl_mm"), dep=num("a_implantation_depth_ncc_mm");
+  put("a_sdims_pct", (msl&&msl!==0&&dep!=null)? +(dep/msl*100).toFixed(1):"");
+  put("a_delta_msid_mm", (msl!=null&&dep!=null)? +(msl-dep).toFixed(2):"");
+  ["hr","pr","qrs","qt","qtc","axis","tpte","ctpte"].forEach(p=>{
+    const b=num("a_ecg_base_"+p), a=num("a_ecg_post_"+p);
+    put("a_ecg_delta_"+p, (b!=null&&a!=null)? +(a-b).toFixed(1):"");
+  });
+}
+
+/* ---------- CIED gate (4.4 = PPMI after TAVI) ---------- */
+function toggleCIED(){
+  const r=document.querySelector('input[name="a_ppmi_after_tavi"]:checked');
+  const on = r && r.value==="1";
+  $("sec_cied").classList.toggle("hide", !on);
+}
+
+/* ---------- completeness + empty highlight ---------- */
+function activeWritable(){
+  const ciedOn = (()=>{const r=document.querySelector('input[name="a_ppmi_after_tavi"]:checked');return r&&r.value==="1";})();
+  return FIELDS.filter(f=>f.writable && f.section!=="record" && (f.group!=="CIED"||ciedOn));
+}
+function updateMeter(){
+  const fs=activeWritable(); let filled=0;
+  fs.forEach(f=>{
+    let v;
+    if(f.kind==="flag"){const r=document.querySelector(`input[name="${f.key}"]:checked`);v=r?r.value:"";}
+    else {const el=document.querySelector(`[data-key="${f.key}"]`);v=el?el.value:"";}
+    const fieldEl=document.querySelector(`.field[data-fieldkey="${f.key}"]`);
+    const empty=(v===""||v==null);
+    if(!empty) filled++;
+    if(fieldEl) fieldEl.classList.toggle("empty", empty);
+  });
+  const n=fs.length, pct=n?Math.round(filled/n*100):0;
+  $("bar").style.width=pct+"%";
+  $("pct").textContent=`${filled} of ${n} fields filled · ${pct}%`;
+}
+
+/* ---------- wire ---------- */
+function wire(){
+  $("form").addEventListener("input", e=>{
+    computeDerived();
+    if(e.target && e.target.name==="a_ppmi_after_tavi") toggleCIED();
+    updateMeter();
+  });
+  $("form").addEventListener("change", e=>{
+    if(e.target && e.target.name==="a_ppmi_after_tavi") toggleCIED();
+    updateMeter();
+  });
+  document.querySelectorAll("[data-clear]").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(`input[name="${b.dataset.clear}"]`).forEach(r=>r.checked=false);
+    toggleCIED(); updateMeter();
+  }));
+}
+
+/* ---------- backend ---------- */
+function setStatus(msg,type){const s=$("status");s.className="status show "+type;s.textContent=msg;}
+function clearStatus(){$("status").className="status";}
+
+async function loadById(){
+  const id=$("searchId").value.trim();
+  if(!id){setStatus("Enter a Study ID first.","err");return;}
+  if(APPS_SCRIPT_URL.startsWith("PASTE")){setStatus("Set APPS_SCRIPT_URL in the code first.","err");return;}
+  setStatus("Loading "+id+"…","info");
+  try{
+    const res=await fetch(APPS_SCRIPT_URL+"?studyId="+encodeURIComponent(id),{method:"GET"});
+    const data=await res.json();
+    if(!data || data.error || !data.record){setStatus("No record found for "+id+".","err");return;}
+    clearForm(false);
+    const rec=data.record;
+    setField("study_id", rec.study_id||id);
+    FIELDS.forEach(f=>{ if(f.section!=="reference" && f.key in rec) setField(f.key, rec[f.key]); });
+    fillReference(rec);
+    computeDerived(); toggleCIED(); updateMeter();
+    setStatus("Loaded "+ (rec.study_id||id) +".","ok");
+  }catch(err){setStatus("Load failed: "+err.message,"err");}
+}
+
+async function saveRecord(){
+  const id=$("fld_study_id").value.trim() || $("searchId").value.trim();
+  if(!id){setStatus("No Study ID set. Load a case or enter an ID.","err");return;}
+  if(APPS_SCRIPT_URL.startsWith("PASTE")){setStatus("Set APPS_SCRIPT_URL in the code first.","err");return;}
+  const fields=getWritable(); fields.study_id=id;
+  setStatus("Saving "+id+"…","info");
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({study_id:id, fields:fields})
+    });
+    const data=await res.json();
+    if(data && data.ok){setStatus("Saved "+id+(data.created?" (new record).":"."),"ok");}
+    else setStatus("Save error: "+((data&&data.error)||"unknown"),"err");
+  }catch(err){setStatus("Save failed: "+err.message,"err");}
+}
+
+/* ---------- init ---------- */
+buildForm();
+$("fld_study_id").value="";
+computeDerived(); updateMeter();
+$("btnLoad").onclick=loadById;
+$("btnSave").onclick=saveRecord;
+$("btnNew").onclick=()=>{const id=$("searchId").value.trim();clearForm(false);setField("study_id",id);clearStatus();setStatus("New blank case"+(id?" for "+id:"")+".","info");};
+$("searchId").addEventListener("keydown",e=>{if(e.key==="Enter")loadById();});
+</script>
+</body>
+</html>
